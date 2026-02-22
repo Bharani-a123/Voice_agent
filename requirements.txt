@@ -1,0 +1,46 @@
+# Project dependencies
+
+# ==============================
+# Core Orchestration
+# ==============================
+langgraph
+langchain
+langchain-community
+
+# ==============================
+# Local LLM Runtime
+# ==============================
+ollama
+
+# ==============================
+# Observability & Tracing
+# ==============================
+langsmith
+langgraph-cli
+
+# ==============================
+# Scraping & HTTP
+# ==============================
+requests
+httpx
+beautifulsoup4
+lxml
+
+# ==============================
+# Data & Config
+# ==============================
+pydantic
+python-dotenv
+
+# ==============================
+# Development & Debugging
+# ==============================
+ipython
+rich
+graphviz
+
+# ==============================
+# Future API Layer (optional)
+# ==============================
+fastapi
+uvicorn
