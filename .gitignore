@@ -1,0 +1,30 @@
+# ─── Environment Variables (CRITICAL: Do not upload credentials) ───
+.env
+.env.*
+!.env.example
+
+# ─── Virtual Environment ───
+venv/
+ENV/
+env/
+.venv/
+bin/
+lib/
+include/
+share/
+*.pyc
+__pycache__/
+
+# ─── Testing Cache ───
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# ─── IDE Configuration ───
+.vscode/
+.idea/
+.DS_Store
+
+# ─── Scratch scripts ───
+scratch/
