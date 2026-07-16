@@ -10,10 +10,18 @@ import os
 from dotenv import load_dotenv
 from agent.nodes.faq import faq_node
 from agent.state import initial_state
+from agent.rag_service import rag
+from db.ingest_faq import FAQ_DATA
 
 load_dotenv()
 
 CLINIC_ID = "d72164a7-dd69-45c2-ac65-92c588b303a8"  # Greenfield seed
+
+
+@pytest.fixture(autouse=True, scope="module")
+def seed_test_database():
+    """Seeds the in-memory Qdrant instance with default FAQ data for testing."""
+    rag.ingest_faq_text(CLINIC_ID, "test_doc", FAQ_DATA)
 
 
 @pytest.mark.skipif("GROQ_API_KEY" not in os.environ, reason="Groq API key not set")

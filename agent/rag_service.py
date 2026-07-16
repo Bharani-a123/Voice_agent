@@ -18,8 +18,14 @@ class RAGService:
     """Provides local embedding generation, vector indexing, and multi-tenant search."""
 
     def __init__(self):
-        # Initialize local Qdrant database (stores vectors on disk under db/qdrant_db)
-        self.client = QdrantClient(path=QDRANT_PATH)
+        import sys
+        # If running inside pytest, use an in-memory database to prevent storage lock conflicts
+        is_testing = "pytest" in sys.modules or os.environ.get("TESTING") == "true"
+        if is_testing:
+            print("[RAG] [TEST] Running in testing environment. Using in-memory Qdrant database.")
+            self.client = QdrantClient(location=":memory:")
+        else:
+            self.client = QdrantClient(path=QDRANT_PATH)
 
         # Initialize FastEmbed CPU-optimized local embedding model
         # Default model is 'BAAI/bge-small-en-v1.5' (384-dimensional, highly accurate and fast)
