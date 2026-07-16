@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCare Connect — Admin Dashboard</title>
+    <!-- Outfit Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for live analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-main: #0c0c0e;
+            --bg-panel: #16161a;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-card: rgba(255, 255, 255, 0.06);
+            --color-text: #f3f4f6;
+            --color-muted: #8e9297;
+            --primary: #04d361;
+            --primary-glow: rgba(4, 211, 97, 0.25);
+            --accent: #8257e5;
+            --accent-glow: rgba(130, 87, 229, 0.25);
+            --danger: #ff4757;
+            --info: #3b82f6;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1a1a2e 0%, var(--bg-main) 100%);
+            color: var(--color-text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Sidebar ──────────────────────────────────────────────────────── */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-card);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
+            box-sizing: border-box;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--bg-main);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #ffffff, var(--color-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 8px;
+            color: var(--color-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: #fff;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.01);
+        }
+
+        .nav-item.active {
+            border-left: 4px solid var(--primary);
+        }
+
+        .nav-item svg {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* ── Main Content Container ────────────────────────────────────────── */
+        .main-container {
+            margin-left: 260px;
+            flex: 1;
+            padding: 40px;
+            box-sizing: border-box;
+            max-width: 1200px;
+            margin-right: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            margin: 4px 0 0 0;
+            color: var(--color-muted);
+            font-size: 15px;
+        }
+
+        /* ── Tab Views ────────────────────────────────────────────────────── */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Metric Cards ─────────────────────────────────────────────────── */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+        }
+
+        .metric-card.bookings::before { background: var(--primary); }
+        .metric-card.calls::before { background: var(--info); }
+        .metric-card.escalations::before { background: var(--danger); }
+        .metric-card.faq::before { background: var(--accent); }
+
+        .metric-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 40px;
+            font-weight: 700;
+            margin-top: 10px;
+            letter-spacing: -1px;
+        }
+
+        /* ── Analytics & Logs ────────────────────────────────────────────── */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 12px;
+        }
+
+        /* ── Table Styling ────────────────────────────────────────────────── */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--color-muted);
+            padding: 14px 16px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        td {
+            padding: 16px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #d1d5db;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+            color: #fff;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge.booked { background: rgba(4, 211, 97, 0.15); color: var(--primary); }
+        .badge.escalated { background: rgba(255, 71, 87, 0.15); color: var(--danger); }
+        .badge.faq { background: rgba(130, 87, 229, 0.15); color: var(--accent); }
+        .badge.rescheduled { background: rgba(59, 130, 246, 0.15); color: var(--info); }
+        .badge.cancelled { background: rgba(255, 255, 255, 0.1); color: var(--color-muted); }
+
+        /* ── Forms ────────────────────────────────────────────────────────── */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-muted);
+            margin-bottom: 8px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            color: #fff;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: var(--bg-main);
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn:hover {
+            background: #00b33c;
+            transform: translateY(-1px);
+        }
+
+        /* ── OAuth Card ───────────────────────────────────────────────────── */
+        .oauth-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+
+        .oauth-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .oauth-icon {
+            width: 48px;
+            height: 48px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .oauth-status-text {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .oauth-status-sub {
+            font-size: 13px;
+            color: var(--color-muted);
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon">+</div>
+            <div class="logo-text">MediCare</div>
+        </div>
+        <ul class="nav-list">
+            <li class="nav-item active" onclick="switchTab('dashboard')">
+                <svg viewBox="0 0 24 24"><path d="M3 13h1v7c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-7h1a1 1 0 0 0 .707-1.707l-9-9a.999.999 0 0 0-1.414 0l-9 9A1 1 0 0 0 3 13zm7 7v-5h4v5h-4z"/></svg>
+                Dashboard
+            </li>
+            <li class="nav-item" onclick="switchTab('logs')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                Call Audit Logs
+            </li>
+            <li class="nav-item" onclick="switchTab('settings')">
+                <svg viewBox="0 0 24 24"><path d="M12 16c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4zm0-6c1.103 0 2 .897 2 2s-.897 2-2 2-2-.897-2-2 .897-2 2-2z"/><path d="m19.704 14.666-2.006-.364a6.002 6.002 0 0 0-.251-1.077l1.371-1.503a1 1 0 0 0-.083-1.402l-1.414-1.414a1.002 1.002 0 0 0-1.402-.083L14.417 7.2a6.002 6.002 0 0 0-1.078-.252l-.364-2.007a1 1 0 0 0-.981-.822h-2a1 1 0 0 0-.98.822l-.364 2.007c-.378.077-.738.163-1.079.252L6.071 5.73A1 1 0 0 0 4.67 5.81L3.256 7.227a1 1 0 0 0-.083 1.402L4.544 10.13a6.002 6.002 0 0 0-.252 1.077l-2.007.365a1 1 0 0 0-.822.98v2a1 1 0 0 0 .822.981l2.007.364c.078.378.163.739.252 1.078l-1.371 1.503a1 1 0 0 0 .083 1.402l1.414 1.414a1 1 0 0 0 1.402.083l1.503-1.372c.34.089.7.175 1.078.252l.364 2.007a1 1 0 0 0 .98.822h2a1 1 0 0 0 .981-.822l.364-2.007c.379-.077.739-.163 1.078-.252l1.503 1.371a1.001 1.001 0 0 0 1.402-.083l1.414-1.414a1 1 0 0 0 .083-1.402l-1.372-1.503c.089-.339.175-.699.252-1.078l2.007-.364a1 1 0 0 0 .822-.981v-2a1 1 0 0 0-.822-.981zm-7.704 3.334c-3.309 0-6-2.691-6-6s2.691-6 6-6 6 2.691 6 6-2.691 6-6 6z"/></svg>
+                Clinic Settings
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-container">
+        
+        <!-- Tab: Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <div class="header">
+                <div>
+                    <h1>Receptionist Dashboard</h1>
+                    <p id="clinic-name-lbl">Greenfield Multi-Specialty Clinic Analytics</p>
+                </div>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div class="metrics-grid">
+                <div class="metric-card calls">
+                    <div class="metric-label">Total Calls Handled</div>
+                    <div id="stat-calls" class="metric-value">0</div>
+                </div>
+                <div class="metric-card bookings">
+                    <div class="metric-label">Appointments Booked</div>
+                    <div id="stat-bookings" class="metric-value">0</div>
+                </div>
+                <div class="metric-card escalations">
+                    <div class="metric-label">Staff Redirections</div>
+                    <div id="stat-escalated" class="metric-value">0</div>
+                </div>
+                <div class="metric-card faq">
+                    <div class="metric-label">FAQ Resolution Rate</div>
+                    <div id="stat-faq" class="metric-value">0%</div>
+                </div>
+            </div>
+
+            <!-- Charts and Small Logs -->
+            <div class="dashboard-row">
+                <div class="panel-card">
+                    <h3 class="panel-title">Call Outcome Breakdown</h3>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="outcomeChart"></canvas>
+                    </div>
+                </div>
+                <div class="panel-card">
+                    <h3 class="panel-title">Handoff Triggers</h3>
+                    <div id="trigger-list" style="font-size: 14px; color: var(--color-muted); line-height: 1.8;">
+                        <!-- Populate dynamic triggers -->
+                        Loading escalation triggers...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Call Audit Logs -->
+        <div id="logs" class="tab-content">
+            <div class="header">
+                <div>
+                    <h1>Call Audit Logs</h1>
+                    <p>Real-time log auditing for all incoming receptionist call states</p>
+                </div>
+            </div>
+            <div class="panel-card">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Call SID</th>
+                                <th>Outcome</th>
+                                <th>Escalated Rule</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--color-muted);">Loading call logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Clinic Settings -->
+        <div id="settings" class="tab-content">
+            <div class="header">
+                <div>
+                    <h1>Clinic Settings</h1>
+                    <p>Manage multi-tenant configuration parameters and OAuth integrations</p>
+                </div>
+            </div>
+
+            <div class="panel-card" style="margin-bottom: 30px;">
+                <h3 class="panel-title">Clinic Identity Configuration</h3>
+                <form id="settings-form" onsubmit="saveSettings(event)">
+                    <div class="form-group">
+                        <label for="input-name">Clinic Name</label>
+                        <input type="text" id="input-name" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="input-phone">Escalation E.164 Phone Number</label>
+                        <input type="text" id="input-phone" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="input-timezone">TimeZone Settings</label>
+                        <select id="input-timezone">
+                            <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                            <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                            <option value="UTC">Coordinated Universal Time (UTC)</option>
+                            <option value="America/New_York">America/New_York (EST)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Save Configurations</button>
+                </form>
+            </div>
+
+            <div class="panel-card">
+                <h3 class="panel-title">Google Calendar Connection Status</h3>
+                <div class="oauth-card">
+                    <div class="oauth-info">
+                        <div class="oauth-icon">📅</div>
+                        <div>
+                            <div class="oauth-status-text" id="gcal-status">Google Calendar: Connected</div>
+                            <div class="oauth-status-sub" id="gcal-sub">Account: primary calendar interface</div>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="/gcal-connect" target="_blank"><button class="btn" style="background: var(--bg-panel); color: #fff; border: 1px solid var(--border-card); box-shadow: none;">Reconnect Account</button></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let outcomeChartInstance = null;
+
+        // Switch Tabs
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (tabId === 'dashboard') {
+                loadDashboardData();
+            } else if (tabId === 'logs') {
+                loadAuditLogs();
+            } else if (tabId === 'settings') {
+                loadSettings();
+            }
+        }
+
+        // Fetch Dashboard Data
+        async function loadDashboardData() {
+            try {
+                const r = await fetch('/api/admin/metrics');
+                const d = await r.json();
+
+                document.getElementById('stat-calls').innerText = d.total_calls;
+                document.getElementById('stat-bookings').innerText = d.total_bookings;
+                document.getElementById('stat-escalated').innerText = d.total_escalations;
+                
+                // Calculate Resolution Rate
+                const total = d.total_calls || 1;
+                const answered = d.total_calls - d.total_escalations;
+                const faqPct = Math.round((answered / total) * 100);
+                document.getElementById('stat-faq').innerText = faqPct + "%";
+
+                // Populate Handoff triggers list
+                const triggerList = document.getElementById('trigger-list');
+                if (d.triggers && d.triggers.length > 0) {
+                    triggerList.innerHTML = d.triggers.map(t => 
+                        `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <span>⚠️ ${t.rule}</span>
+                            <span style="font-weight:600; color:var(--danger);">${t.count} times</span>
+                         </div>`
+                    ).join('');
+                } else {
+                    triggerList.innerHTML = `<div style="text-align:center; padding: 20px 0;">No escalation handoffs triggered yet.</div>`;
+                }
+
+                // Render Chart.js outcome breakdown
+                renderChart(d.breakdown);
+
+            } catch (e) {
+                console.error("Failed to load dashboard metrics", e);
+            }
+        }
+
+        // Render Outcome Breakdown Chart
+        function renderChart(breakdown) {
+            const ctx = document.getElementById('outcomeChart').getContext('2d');
+            
+            if (outcomeChartInstance) {
+                outcomeChartInstance.destroy();
+            }
+
+            const labels = Object.keys(breakdown);
+            const values = Object.values(breakdown);
+
+            outcomeChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => l.toUpperCase()),
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            'rgba(4, 211, 97, 0.65)',   // booked
+                            'rgba(59, 130, 246, 0.65)',  // rescheduled
+                            'rgba(255, 71, 87, 0.65)',   // escalated
+                            'rgba(130, 87, 229, 0.65)',  // faq_answered
+                        ],
+                        borderColor: [
+                            'var(--primary)',
+                            'var(--info)',
+                            'var(--danger)',
+                            'var(--accent)'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: 'var(--color-muted)' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'var(--color-muted)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load Audit Logs Table
+        async function loadAuditLogs() {
+            try {
+                const r = await fetch('/api/admin/logs');
+                const logs = await r.json();
+
+                const tbody = document.getElementById('logs-table-body');
+                if (logs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--color-muted);">No call logs recorded yet.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(l => {
+                    const formattedTime = new Date(l.created_at).toLocaleString();
+                    const outcomeBadge = `<span class="badge ${l.outcome}">${l.outcome}</span>`;
+                    const ruleLabel = l.matched_rule ? `⚠️ ${l.matched_rule}` : '<span style="color:var(--color-muted);">None</span>';
+                    
+                    return `
+                        <tr>
+                            <td>${formattedTime}</td>
+                            <td><code style="color:var(--accent);">${l.call_sid.substring(0, 12)}...</code></td>
+                            <td>${outcomeBadge}</td>
+                            <td>${ruleLabel}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                console.error("Failed to load audit logs", e);
+            }
+        }
+
+        // Load Clinic Settings
+        async function loadSettings() {
+            try {
+                const r = await fetch('/api/admin/settings');
+                const s = await r.json();
+
+                document.getElementById('input-name').value = s.name;
+                document.getElementById('input-phone').value = s.escalation_phone_e164;
+                document.getElementById('input-timezone').value = s.timezone;
+
+                document.getElementById('clinic-name-lbl').innerText = `${s.name} Analytics`;
+
+                // Update Google Calendar connection tag
+                const gcalStatus = document.getElementById('gcal-status');
+                const gcalSub = document.getElementById('gcal-sub');
+                if (s.calendar_provider === 'google') {
+                    gcalStatus.innerText = "Google Calendar: Connected";
+                    gcalStatus.style.color = "var(--primary)";
+                } else {
+                    gcalStatus.innerText = "Google Calendar: Not Connected";
+                    gcalStatus.style.color = "var(--color-muted)";
+                    gcalSub.innerText = "Authorize calendar writes in the Reconnect Account option.";
+                }
+
+            } catch (e) {
+                console.error("Failed to load settings", e);
+            }
+        }
+
+        // Save Settings
+        async function saveSettings(e) {
+            e.preventDefault();
+            const name = document.getElementById('input-name').value;
+            const phone = document.getElementById('input-phone').value;
+            const timezone = document.getElementById('input-timezone').value;
+
+            try {
+                const r = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        escalation_phone_e164: phone,
+                        timezone: timezone
+                    })
+                });
+
+                if (r.ok) {
+                    alert("Clinic configurations saved successfully!");
+                    loadSettings();
+                } else {
+                    alert("Error saving clinic settings.");
+                }
+            } catch (e) {
+                alert("Failed to connect to the server.");
+            }
+        }
+
+        // Initial Load
+        loadDashboardData();
+    </script>
+</body>
+</html>

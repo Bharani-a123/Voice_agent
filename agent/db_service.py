@@ -260,6 +260,93 @@ class DBService:
             print(f"[DB] Error writing call log: {e}")
             return False
 
+    def update_clinic_settings(self, clinic_id: str, name: str, phone: str, timezone: str) -> bool:
+        """Updates name, escalation phone, and timezone configuration for a clinic."""
+        try:
+            with self._get_conn(clinic_id) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE clinics
+                        SET name = %s,
+                            escalation_phone_e164 = %s,
+                            timezone = %s
+                        WHERE id = %s
+                    """, (name, phone, timezone, clinic_id))
+                    conn.commit()
+                    return True
+        except Exception as e:
+            print(f"[DB] Error updating clinic settings: {e}")
+            return False
+
+    def get_call_logs(self, clinic_id: str, limit: int = 50) -> list[dict]:
+        """Fetch audit call logs for the specified clinic."""
+        try:
+            with self._get_conn(clinic_id) as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        SELECT call_sid, outcome, escalated, matched_rule, created_at
+                        FROM call_logs
+                        WHERE clinic_id = %s
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                    """, (clinic_id, limit))
+                    return cur.fetchall()
+        except Exception as e:
+            print(f"[DB] Error fetching call logs: {e}")
+            return []
+
+    def get_metrics(self, clinic_id: str) -> dict:
+        """Fetch aggregated metrics for the dashboard (counts, outcomes, rules)."""
+        metrics = {
+            "total_calls": 0,
+            "total_bookings": 0,
+            "total_escalations": 0,
+            "breakdown": {},
+            "triggers": []
+        }
+        try:
+            with self._get_conn(clinic_id) as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    # 1. Total calls count
+                    cur.execute("SELECT COUNT(*) as count FROM call_logs WHERE clinic_id = %s", (clinic_id,))
+                    row = cur.fetchone()
+                    metrics["total_calls"] = row["count"] if row else 0
+
+                    # 2. Total bookings count
+                    cur.execute("SELECT COUNT(*) as count FROM bookings WHERE clinic_id = %s", (clinic_id,))
+                    row = cur.fetchone()
+                    metrics["total_bookings"] = row["count"] if row else 0
+
+                    # 3. Total escalations count
+                    cur.execute("SELECT COUNT(*) as count FROM call_logs WHERE clinic_id = %s AND escalated = TRUE", (clinic_id,))
+                    row = cur.fetchone()
+                    metrics["total_escalations"] = row["count"] if row else 0
+
+                    # 4. Call outcomes breakdown
+                    cur.execute("""
+                        SELECT outcome, COUNT(*) as count
+                        FROM call_logs
+                        WHERE clinic_id = %s
+                        GROUP BY outcome
+                    """, (clinic_id,))
+                    for r in cur.fetchall():
+                        metrics["breakdown"][r["outcome"]] = r["count"]
+
+                    # 5. Escalation triggers breakdown
+                    cur.execute("""
+                        SELECT matched_rule as rule, COUNT(*) as count
+                        FROM call_logs
+                        WHERE clinic_id = %s AND escalated = TRUE AND matched_rule IS NOT NULL
+                        GROUP BY matched_rule
+                        ORDER BY count DESC
+                    """, (clinic_id,))
+                    metrics["triggers"] = cur.fetchall()
+
+        except Exception as e:
+            print(f"[DB] Error fetching clinic metrics: {e}")
+        return metrics
+
+
 
 # Singleton instance
 db = DBService()

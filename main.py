@@ -12,7 +12,7 @@ import base64
 import asyncio
 import httpx
 from fastapi import FastAPI, WebSocket, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from twilio.twiml.voice_response import VoiceResponse, Connect
 from twilio.rest import Client
 from agent.graph import graph
@@ -385,6 +385,51 @@ async def simulate_turn(payload: dict):
             "response": f"[Error: {e}] Let me connect you with a staff member.",
             "state": state
         }
+
+
+# ── Clinic Admin Portal Endpoints (Phase 7) ──────────────────────────────────
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_portal():
+    """Serves the main clinic configurations and audit log dashboard UI."""
+    return FileResponse(os.path.join("templates", "admin.html"))
+
+
+@app.get("/api/admin/metrics")
+async def get_admin_metrics():
+    """Returns aggregated call analytics and outcome statistics."""
+    return db.get_metrics(CLINIC_ID)
+
+
+@app.get("/api/admin/logs")
+async def get_admin_logs():
+    """Returns recent call audit logs."""
+    return db.get_call_logs(CLINIC_ID, limit=50)
+
+
+@app.get("/api/admin/settings")
+async def get_admin_settings():
+    """Returns clinic settings details (timezone, escalation phone, name)."""
+    clinic = db.get_clinic(CLINIC_ID)
+    if not clinic:
+        return {
+            "name": "Greenfield Multi-Specialty Clinic",
+            "escalation_phone_e164": "+919876543210",
+            "timezone": "Asia/Kolkata",
+            "calendar_provider": "google"
+        }
+    return clinic
+
+
+@app.post("/api/admin/settings")
+async def post_admin_settings(payload: dict):
+    """Updates clinic configurations (timezone, escalation phone, name) in Supabase."""
+    name = payload.get("name", "Greenfield Multi-Specialty Clinic")
+    phone = payload.get("escalation_phone_e164", "+919876543210")
+    timezone = payload.get("timezone", "Asia/Kolkata")
+    
+    success = db.update_clinic_settings(CLINIC_ID, name, phone, timezone)
+    return {"status": "success" if success else "error"}
+
 
 
 if __name__ == "__main__":

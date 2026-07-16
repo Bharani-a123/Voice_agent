@@ -100,3 +100,44 @@ def test_simulate_turn_escalation():
     # Check that system redirection message is appended to the response
     assert "[SYSTEM: Call redirected to human escalation line" in data["response"]
 
+
+def test_admin_portal_get():
+    """Verify that the dashboard HTML UI is served correctly."""
+    resp = client.get("/admin")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+
+
+def test_api_admin_settings():
+    """Verify settings REST endpoints fetch and updates."""
+    # 1. Fetch settings
+    resp = client.get("/api/admin/settings")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "name" in data
+    assert "escalation_phone_e164" in data
+    assert "timezone" in data
+
+    # 2. Update settings
+    payload = {
+        "name": "Greenfield Multi-Specialty Clinic",
+        "escalation_phone_e164": "+919999888800",
+        "timezone": "Asia/Kolkata"
+    }
+    resp = client.post("/api/admin/settings", json=payload)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
+
+
+def test_api_admin_metrics():
+    """Verify metrics REST API payload structure."""
+    resp = client.get("/api/admin/metrics")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "total_calls" in data
+    assert "total_bookings" in data
+    assert "total_escalations" in data
+    assert "breakdown" in data
+    assert "triggers" in data
+
+
