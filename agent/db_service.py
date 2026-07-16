@@ -45,6 +45,17 @@ class DBService:
                 cur.execute("SET LOCAL app.current_clinic_id = %s", (clinic_id,))
         return conn
 
+    def get_clinic(self, clinic_id: str) -> dict | None:
+        """Fetch clinic details (id, name, timezone)."""
+        try:
+            with self._get_conn(clinic_id) as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("SELECT id, name, timezone FROM clinics WHERE id = %s", (clinic_id,))
+                    return cur.fetchone()
+        except Exception as e:
+            print(f"[DB] Error fetching clinic details: {e}")
+            return None
+
     def get_clinic_timezone(self, clinic_id: str) -> str:
         """Fetch clinic timezone, defaults to UTC if not found."""
         try:
