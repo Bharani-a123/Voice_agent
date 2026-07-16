@@ -46,11 +46,11 @@ class DBService:
         return conn
 
     def get_clinic(self, clinic_id: str) -> dict | None:
-        """Fetch clinic details (id, name, timezone)."""
+        """Fetch clinic details (id, name, timezone, escalation_phone_e164)."""
         try:
             with self._get_conn(clinic_id) as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("SELECT id, name, timezone FROM clinics WHERE id = %s", (clinic_id,))
+                    cur.execute("SELECT id, name, timezone, escalation_phone_e164 FROM clinics WHERE id = %s", (clinic_id,))
                     return cur.fetchone()
         except Exception as e:
             print(f"[DB] Error fetching clinic details: {e}")

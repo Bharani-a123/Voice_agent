@@ -14,8 +14,10 @@ import httpx
 from fastapi import FastAPI, WebSocket, Request, Response
 from fastapi.responses import HTMLResponse
 from twilio.twiml.voice_response import VoiceResponse, Connect
+from twilio.rest import Client
 from agent.graph import graph
 from agent.state import initial_state
+from agent.db_service import db
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -66,6 +68,46 @@ async def generate_tts_audio(text: str) -> bytes | None:
     except Exception as e:
         print(f"[TTS] Error generating speech: {e}")
     return None
+
+
+# ── Twilio Escalation Live Call Transfer (Phase 6) ──────────────────────────
+async def redirect_call_to_escalation(call_sid: str, escalation_number: str):
+    """
+    Invokes Twilio REST API to redirect current live call to /escalate-dial TwiML endpoint.
+    Wait for 4.0 seconds to allow the receptionist's final voice response to finish playing.
+    """
+    await asyncio.sleep(4.0)
+
+    account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+
+    if not account_sid or not auth_token or call_sid.startswith("simulated-"):
+        print(f"[Twilio] [DEV] Simulated redirect for CallSid '{call_sid}' to {escalation_number} complete.")
+        return
+
+    try:
+        host = os.environ.get("PUBLIC_URL")
+        if not host:
+            print("[Twilio] ERROR: PUBLIC_URL env variable is missing. Cannot perform REST API redirect.")
+            return
+
+        client = Client(account_sid, auth_token)
+        client.calls(call_sid).update(
+            method="POST",
+            url=f"{host}/escalate-dial?number={escalation_number}"
+        )
+        print(f"[Twilio] Redirected CallSid '{call_sid}' successfully to {escalation_number}.")
+    except Exception as e:
+        print(f"[Twilio] Error redirecting call: {e}")
+
+
+@app.post("/escalate-dial")
+async def escalate_dial(request: Request, number: str):
+    """Returns TwiML instructions to bridge the active call to a clinic human agent."""
+    response = VoiceResponse()
+    print(f"[Twilio] Dialing human escalation number: {number}")
+    response.dial(number)
+    return Response(content=str(response), media_type="application/xml")
 
 
 # ── Webhook: Incoming Twilio Call ────────────────────────────────────────────
@@ -172,6 +214,13 @@ async def media_stream(websocket: WebSocket):
                     # Pause 20ms between chunks to maintain natural play rate
                     await asyncio.sleep(0.02)
                 print(f"[TTS] Outgoing audio streaming complete.")
+
+            # 4. Check for Escalation and trigger transfer
+            if call_state.get("escalated"):
+                clinic = db.get_clinic(CLINIC_ID)
+                esc_num = clinic["escalation_phone_e164"] if clinic else "+919876543210"
+                print(f"[WS] Escalation triggered! Scheduling redirect for CallSid '{call_sid}' to {esc_num}...")
+                asyncio.create_task(redirect_call_to_escalation(call_sid, esc_num))
 
         except Exception as e:
             print(f"[Brain] Error processing turn: {e}")
@@ -320,8 +369,15 @@ async def simulate_turn(payload: dict):
         # Clear messages from JSON serialization context since they are Pydantic objects
         serializable_state = {k: v for k, v in updated_state.items() if k != "messages"}
         
+        response_text = updated_state.get("response", "")
+        if updated_state.get("escalated"):
+            # Fetch escalation number dynamically
+            clinic = db.get_clinic(state.get("clinic_id", CLINIC_ID))
+            esc_num = clinic["escalation_phone_e164"] if clinic else "+919876543210"
+            response_text += f" <br/><span style='color: #fd951f;'>[SYSTEM: Call redirected to human escalation line: {esc_num}]</span>"
+
         return {
-            "response": updated_state.get("response", ""),
+            "response": response_text,
             "state": serializable_state
         }
     except Exception as e:

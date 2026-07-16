@@ -62,3 +62,41 @@ def test_simulate_turn():
     response_text = data["response"].lower()
     # Check that it answered correctly using Qdrant FAQ context
     assert "star health" in response_text or "lombard" in response_text or "insurance" in response_text
+
+
+def test_escalate_dial_twiml():
+    """Verify that escalate-dial returns valid TwiML dialing instructions."""
+    resp = client.post("/escalate-dial?number=%2B919876543210")
+    assert resp.status_code == 200
+    assert "application/xml" in resp.headers["content-type"]
+
+    root = ET.fromstring(resp.text)
+    assert root.tag == "Response"
+    dial_elem = root.find("Dial")
+    assert dial_elem is not None
+    assert dial_elem.text == "+919876543210"
+
+
+def test_simulate_turn_escalation():
+    """Verify that simulate-turn triggers escalation for red flags."""
+    payload = {
+        "text": "I am having severe chest pain and pressure in my heart",
+        "state": {
+            "clinic_id": "d72164a7-dd69-45c2-ac65-92c588b303a8",
+            "call_sid": "test-sim-123",
+            "messages": [],
+            "current_input": "",
+            "response": ""
+        }
+    }
+    resp = client.post("/simulate-turn", json=payload)
+    assert resp.status_code == 200
+    
+    data = resp.json()
+    assert "response" in data
+    assert "state" in data
+    assert data["state"]["escalated"] is True
+
+    # Check that system redirection message is appended to the response
+    assert "[SYSTEM: Call redirected to human escalation line" in data["response"]
+
